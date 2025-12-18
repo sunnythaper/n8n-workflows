@@ -1,0 +1,410 @@
+{
+  "name": "Ghost Social → Twitter",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "id": "36af0f8e-94da-44cb-96bf-f966cf102feb",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1104,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://{{ $('Configure Workflow').item.json.domain }}/.ghost/activitypub/outbox/index",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "8eeef9f2-3afb-4e18-912b-448784d6a79c",
+      "name": "Fetch Outbox",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -672,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.first }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "1b7f001a-d053-4a42-9c11-d321234fa10a",
+      "name": "Fetch First Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -448,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "orderedItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        160
+      ],
+      "id": "e1daa506-83b3-43c1-9923-8854dc7351f9",
+      "name": "Split Out Items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "58df4784-c4d4-409e-9528-2249a5d10138",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "Create",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "0b3b8a8c-53c3-463a-a09e-e10cf9587336",
+              "leftValue": "={{ $json.object.type }}",
+              "rightValue": "Article|Note",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "1ca68c6b-ba91-436d-9746-a22e937ddb82",
+              "leftValue": "={{ $json.object.published }}",
+              "rightValue": "={{ $('Configure Workflow').item.json.publishedAfter.toDateTime() }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -16,
+        160
+      ],
+      "id": "65c6ddaa-d1e9-49a5-9ea7-69dc211dcd9a",
+      "name": "Filter Items"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.object.type }}",
+                    "rightValue": "Article",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "be0f3f62-7b2d-4993-8902-d559f4dea72d"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Article"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "76a6c21b-0990-4bdc-87e7-654d6a66edfe",
+                    "leftValue": "={{ $json.object.type }}",
+                    "rightValue": "Note",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Note"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        192,
+        160
+      ],
+      "id": "67b5d223-ac31-44b9-83ee-3c0d9922a0a7",
+      "name": "Switch Based on Type"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "995b8871-24a7-4862-bb9f-a1f613102c80",
+              "name": "Content",
+              "value": "={{ $json.object.content.replaceAll('<br \\/>','\\n').removeTags() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        400,
+        256
+      ],
+      "id": "bac97c2e-a986-4131-91b5-1afc1b90b9ad",
+      "name": "Format Note Content"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5f2c4e70-e37f-49de-b898-97279fb9dffb",
+              "name": "Content",
+              "value": "={{ $json.object.summary }}\n{{ $json.object.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        400,
+        64
+      ],
+      "id": "70d7d852-672f-4ee6-844e-7aab9fb5420a",
+      "name": "Format Article Content"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3b03b297-e8b5-4faf-bf4a-f7e6792086c1",
+              "name": "domain",
+              "value": "example.com",
+              "type": "string"
+            },
+            {
+              "id": "192552c4-a253-468e-bb1e-bbb590522463",
+              "name": "publishedAfter",
+              "value": "={{ $now.minus(5, 'minutes') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -896,
+        160
+      ],
+      "id": "9c396633-7269-4e5d-9c61-582dd1351e05",
+      "name": "Configure Workflow"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.Content }}",
+        "additionalFields": {}
+      },
+      "id": "dacc2b06-ddb0-4f57-b4d3-3c27102a50ea",
+      "name": "Post Tweet (Text Only)",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        672,
+        160
+      ],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "V4AQBHWCj8MmOgcT",
+          "name": "X account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Configure Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Outbox": {
+      "main": [
+        [
+          {
+            "node": "Fetch First Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch First Page": {
+      "main": [
+        [
+          {
+            "node": "Split Out Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Items": {
+      "main": [
+        [
+          {
+            "node": "Filter Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Items": {
+      "main": [
+        [
+          {
+            "node": "Switch Based on Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Based on Type": {
+      "main": [
+        [
+          {
+            "node": "Format Article Content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Note Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configure Workflow": {
+      "main": [
+        [
+          {
+            "node": "Fetch Outbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Note Content": {
+      "main": [
+        [
+          {
+            "node": "Post Tweet (Text Only)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Article Content": {
+      "main": [
+        [
+          {
+            "node": "Post Tweet (Text Only)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "5f07d6cc-389f-4dca-916a-d75c1bd0e0cf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f80e038bf7b8c99e3db7e7d6a34de2c19f0af25e5d7445b15c36d79b6e8e9e55"
+  },
+  "id": "wFYaRlT8hfjxVPMh",
+  "tags": []
+}
